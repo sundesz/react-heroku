@@ -6,6 +6,7 @@ app.get('/', (req, res) => {
 })
 
 app.get('/api/dates', (req, res) => {
+    console.log(new Date())
     res.json(new Date())
 })
 
