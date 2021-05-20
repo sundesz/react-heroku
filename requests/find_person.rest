@@ -1,1 +1,8 @@
-GET http://localhost:3001/api/persons/60a2eaa2a11375528fb0bcb5
+GET http://localhost:3001/api/persons/60a2eaa2a11375528fb0bcb56
+
+
+###
+DELETE http://localhost:3001/api/persons/60a442335bbb9a0015f235b5
+
+
+###

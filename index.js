@@ -1,12 +1,13 @@
 require('dotenv').config()
 const express = require('express')
 const cors = require('cors')
-const Person = require('./models/person')
 const app = express()
+const Person = require('./models/person')
 
-app.use(cors())
-app.use(express.json())
 app.use(express.static('build'))
+app.use(express.json())
+app.use(cors())
+
 
 let notes = [{
     id: 1,
@@ -79,32 +80,84 @@ app.get('/api/persons', (req, res) => {
     })
 })
 
-app.post('/api/persons', (req, res) => {
+app.post('/api/persons', (req, res, next) => {
     const body = req.body
-
-    if (body.name === undefined) {
-        return res.status(400).json({error: 'name missing'})
-    }
-
-    if (body.number === undefined) {
-        return res.status(400).json({error: 'number missing'})
-    }
 
     const person = new Person({
         name: body.name,
         number: body.number
     })
 
-    person.save().then(savedPerson => {
-        res.json(savedPerson)
-    })
+    person.save()
+        .then(savedPerson => savedPerson.toJSON())
+        .then(savedAndFormattedPerson => {
+            res.json(savedAndFormattedPerson)
+        })
+        .catch(error => next(error))
 })
 
-app.get('/api/persons/:id', (req, res) => {
-    Person.findById(req.params.id).then(p => {
-        res.json(p)
-    })
+app.get('/api/persons/:id', (req, res, next) => {
+    Person
+        .findById(req.params.id)
+        .then(p => {
+            p ? res.json(p) : res.status(404).end()
+        })
+        .catch(error => next(error))
 })
+
+
+app.delete('/api/persons/:id', (req, res, next) => {
+    Person
+        .findByIdAndRemove(req.params.id)
+        .then(result => {
+            res.status(204).end()
+        })
+        .catch(error => next(error))
+
+})
+
+
+app.put('/api/persons/:id', (req, res, next) => {
+    const body = req.body
+
+    const person = {
+        name: body.name,
+        number: body.number
+    }
+
+    Person
+        .findByIdAndUpdate(req.params.id, person, {new: true})
+        .then(updatedPerson => {
+            res.json(updatedPerson)
+        })
+        .catch(error => next(error))
+})
+
+
+const unknownEndpoint = (request, response) => {
+    response.status(404).send({ error: 'unknown endpoint' })
+}
+
+  // handler of requests with unknown endpoint
+  app.use(unknownEndpoint)
+
+
+const errorHandler = (error, request, response, next) => {
+    console.log(error.message)
+
+    if (error.name === 'CastError') {
+        return response.status(400).send({ error: 'malformatted id' })
+    }
+
+    if (error.name === 'ValidationError') {
+        return response.status(400).json({ error: error.message })
+    }
+
+    next(error)
+}
+
+// this has to be the last loaded middleware
+app.use(errorHandler)
 
 const PORT = process.env.PORT || 3001
 app.listen(PORT, () => {
